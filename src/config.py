@@ -30,3 +30,12 @@ class ArxivSettings(DefaultSettings):
     timeout_seconds: int = 30
     max_results: int = 100
     search_category: str = "cs.AI"  # Default category to search
+
+class Settings(DefaultSettings):
+    # arXiv settings
+    arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
+
+
+def get_settings() -> Settings:
+    """Get application settings."""
+    return Settings()
