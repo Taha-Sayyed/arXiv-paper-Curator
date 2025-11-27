@@ -41,3 +41,15 @@ class ArxivClient:
     @property
     def search_category(self)->str:
         return self.__settings.search_category
+    
+    async def fetch_papers(
+            self,
+            max_results:Optional[int]=None, #(uses settings default if None)
+            start:int=0,
+            sort_by: str = "submittedDate",
+            sort_order: str = "descending",
+            from_date: Optional[str] = None,
+            to_date: Optional[str] = None,
+
+    )->List[ArxivPaper]:
+        pass
