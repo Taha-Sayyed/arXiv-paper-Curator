@@ -1,10 +1,24 @@
 #by taha
 import time
+import asyncio
+import httpx
+import logging
+import xml.etree.ElementTree as ET
+
+
+
+
+from urllib.parse import quote, urlencode
 from functools import cached_property
 from pathlib import Path
 from typing import Dict, List, Optional
 from src.config import ArxivSettings
 from src.schemas.arxiv.paper import ArxivPaper
+from src.exceptions import ArxivAPIException, ArxivAPITimeoutError, ArxivParseError, PDFDownloadException, PDFDownloadTimeoutError
+
+
+logger = logging.getLogger(__name__)
+
 
 class ArxivClient:
     """Client for fetching papers from arXiv API"""
@@ -77,4 +91,35 @@ class ArxivClient:
         safe = ":+[]"  # Don't encode :, +, [, ] characters needed for arXiv queries
         url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
 
+        try:
+            logger.info(f"Fetching {max_results} {self.search_category} papers from arXiv")
+
+            # Add rate limiting delay between all requests (arXiv recommends 3 seconds)
+            if self._last_request_time is not None:
+                time_since_last = time.time() - self._last_request_time
+                if time_since_last < self.rate_limit_delay:
+                    sleep_time = self.rate_limit_delay - time_since_last
+                    await asyncio.sleep(sleep_time)
+
+            self._last_request_time = time.time()
+
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                xml_data = response.text
+
+            papers = self._parse_response(xml_data)
+            logger.info(f"Fetched {len(papers)} papers")
+
+            return papers
+
+        except httpx.TimeoutException as e:
+            logger.error(f"arXiv API timeout: {e}")
+            raise ArxivAPITimeoutError(f"arXiv API request timed out: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"arXiv API HTTP error: {e}")
+            raise ArxivAPIException(f"arXiv API returned error {e.response.status_code}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to fetch papers from arXiv: {e}")
+            raise ArxivAPIException(f"Unexpected error fetching papers from arXiv: {e}")
 
