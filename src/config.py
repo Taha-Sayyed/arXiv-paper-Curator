@@ -1,3 +1,4 @@
+#by Taha
 from typing import List
 
 from pydantic import Field, field_validator
@@ -29,4 +30,3 @@ class ArxivSettings(DefaultSettings):
     timeout_seconds: int = 30
     max_results: int = 100
     search_category: str = "cs.AI"  # Default category to search
-
