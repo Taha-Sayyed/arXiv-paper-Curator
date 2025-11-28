@@ -319,6 +319,34 @@ class ArxivClient:
                 return url
         return ""
 
+    #Download PDF for a given paper to local cache
+
+    async def download_pdf(self, paper: ArxivPaper, force_download: bool = False) -> Optional[Path]:
+       
+        if not paper.pdf_url:
+            logger.error(f"No PDF URL for paper {paper.arxiv_id}")
+            return None
+
+        pdf_path = self._get_pdf_path(paper.arxiv_id) #define below
+
+        # Return cached PDF if exists
+        if pdf_path.exists() and not force_download:
+            logger.info(f"Using cached PDF: {pdf_path.name}")
+            return pdf_path
+
+        # Download with retry
+        if await self._download_with_retry(paper.pdf_url, pdf_path):
+            return pdf_path
+        else:
+            return None
+    
+    def _get_pdf_path(self, arxiv_id: str) -> Path:
+        
+        safe_filename = arxiv_id.replace("/", "_") + ".pdf"
+        return self.pdf_cache_dir / safe_filename
+
+
+
 
 
 
