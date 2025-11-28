@@ -345,8 +345,53 @@ class ArxivClient:
         safe_filename = arxiv_id.replace("/", "_") + ".pdf"
         return self.pdf_cache_dir / safe_filename
 
+    #Download a file with retry logic.
 
+    async def _download_with_retry(self, url: str, path: Path, max_retries: int = 3) -> bool:
+        
+        logger.info(f"Downloading PDF from {url}")
 
+        # Respect rate limits to avoid errors
+        await asyncio.sleep(self.rate_limit_delay)
+
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    async with client.stream("GET", url) as response:
+                        response.raise_for_status()
+                        with open(path, "wb") as f:
+                            async for chunk in response.aiter_bytes():
+                                f.write(chunk)
+                logger.info(f"Successfully downloaded to {path.name}")
+                return True
+
+            except httpx.TimeoutException as e:
+                if attempt < max_retries - 1:
+                    wait_time = 5 * (attempt + 1)
+                    logger.warning(f"PDF download timeout (attempt {attempt + 1}/{max_retries}): {e}")
+                    logger.info(f"Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"PDF download failed after {max_retries} attempts due to timeout: {e}")
+                    raise PDFDownloadTimeoutError(f"PDF download timed out after {max_retries} attempts: {e}")
+            except httpx.HTTPError as e:
+                if attempt < max_retries - 1:
+                    wait_time = 5 * (attempt + 1)  # Exponential backoff
+                    logger.warning(f"Download failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    logger.info(f"Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"Failed after {max_retries} attempts: {e}")
+                    raise PDFDownloadException(f"PDF download failed after {max_retries} attempts: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected download error: {e}")
+                raise PDFDownloadException(f"Unexpected error during PDF download: {e}")
+
+        # Clean up partial download
+        if path.exists():
+            path.unlink()
+
+        return False
 
 
 
