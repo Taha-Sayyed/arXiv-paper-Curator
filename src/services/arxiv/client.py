@@ -177,3 +177,22 @@ class ArxivClient:
             logger.error(f"Failed to fetch papers from arXiv: {e}")
             raise ArxivAPIException(f"Unexpected error fetching papers from arXiv: {e}")
         
+        #arXiv paper ID (e.g., "2507.17748v1" or "2507.17748")
+
+    async def fetch_paper_by_id(self, arxiv_id: str) -> Optional[ArxivPaper]:
+        # Clean the arXiv ID (remove version if needed for search)
+        clean_id = arxiv_id.split("v")[0] if "v" in arxiv_id else arxiv_id
+        params = {"id_list": clean_id, 
+                  "max_results": 1}
+        
+        safe = ":+[]*"  # Don't encode :, +, [, ], *, characters needed for arXiv queries
+
+        url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
+
+        
+
+
+
+
+
+
