@@ -16,3 +16,10 @@ class ArxivAPIRateLimitError(ArxivAPIException):
 class ArxivParseError(ArxivAPIException):
     """Exception raised when arXiv API response parsing fails."""
 
+# Week 2: PDF parsing exceptions 
+
+class PDFDownloadException(Exception):
+    """Base exception for PDF download-related errors."""
+
+class PDFDownloadTimeoutError(PDFDownloadException):
+    """Exception raised when PDF download times out."""
