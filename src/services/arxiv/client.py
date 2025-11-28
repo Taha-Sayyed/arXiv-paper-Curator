@@ -145,4 +145,35 @@ class ArxivClient:
         safe = ":+[]*"  # Don't encode :, +, [, ], *, characters needed for arXiv queries
         url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
 
+        #Add rate limitting (arXiv recommends 3 seconds)
+
+        try:
+            # Add rate limiting delay between all requests (arXiv recommends 3 seconds)
+            if self._last_request_time is not None:
+                time_since_last = time.time() - self._last_request_time
+                if time_since_last < self.rate_limit_delay:
+                    sleep_time = self.rate_limit_delay - time_since_last
+                    await asyncio.sleep(sleep_time)
+
+            self._last_request_time = time.time()
+
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                xml_data = response.text
+
+            papers = self._parse_response(xml_data)
+            logger.info(f"Query returned {len(papers)} papers")
+
+            return papers
+
+        except httpx.TimeoutException as e:
+            logger.error(f"arXiv API timeout: {e}")
+            raise ArxivAPITimeoutError(f"arXiv API request timed out: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"arXiv API HTTP error: {e}")
+            raise ArxivAPIException(f"arXiv API returned error {e.response.status_code}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to fetch papers from arXiv: {e}")
+            raise ArxivAPIException(f"Unexpected error fetching papers from arXiv: {e}")
         
