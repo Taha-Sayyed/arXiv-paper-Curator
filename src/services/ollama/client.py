@@ -67,4 +67,24 @@ class OllamaClient:
         except Exception as e:
             raise OllamaException(f"Error listing models: {e}")
 
-    
+    #Generate text using specified model
+    async def generate(self, model: str, prompt: str, stream: bool = False, **kwargs) -> Optional[Dict[str, Any]]:
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                data = {"model": model, "prompt": prompt, "stream": stream, **kwargs}
+
+                response = await client.post(f"{self.base_url}/api/generate", json=data)
+
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    raise OllamaException(f"Generation failed: {response.status_code}")
+
+        except httpx.ConnectError as e:
+            raise OllamaConnectionError(f"Cannot connect to Ollama service: {e}")
+        except httpx.TimeoutException as e:
+            raise OllamaTimeoutError(f"Ollama service timeout: {e}")
+        except OllamaException:
+            raise
+        except Exception as e:
+            raise OllamaException(f"Error generating with Ollama: {e}")
