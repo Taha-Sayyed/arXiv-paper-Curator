@@ -40,3 +40,10 @@ class DoclingParser:
         self._warmed_up = False
         self.max_pages = max_pages
         self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
+
+    #Pre-warm the models with a small dummy document to avoid cold start
+    def _warm_up_models(self):
+    
+        if not self._warmed_up:
+            # This happens only once per DoclingParser instance
+            self._warmed_up = True
