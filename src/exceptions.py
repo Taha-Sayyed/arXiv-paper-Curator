@@ -1,4 +1,6 @@
 #by taha
+class ParsingException(Exception):
+    """Base exception for parsing-related errors."""
 
 # Week 2+: ArXiv API exceptions
 class ArxivAPIException(Exception):
@@ -17,6 +19,12 @@ class ArxivParseError(ArxivAPIException):
     """Exception raised when arXiv API response parsing fails."""
 
 # Week 2: PDF parsing exceptions 
+
+class PDFParsingException(ParsingException):
+    """Base exception for PDF parsing-related errors."""
+
+class PDFValidationError(PDFParsingException):
+    """Exception raised when PDF file validation fails."""
 
 class PDFDownloadException(Exception):
     """Base exception for PDF download-related errors."""
