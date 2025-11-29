@@ -35,6 +35,21 @@ class Settings(DefaultSettings):
     # arXiv settings
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
 
+    ## Ollama configuration
+    ollama_host: str = "http://localhost:11434"
+    ollama_models: List[str] = Field(default=["llama3.2:1b"])
+    ollama_default_model: str = "llama3.2:1b"
+    ollama_timeout: int = 300  # 5 minutes for LLM operations
+
+    @field_validator("ollama_models", mode="before")
+    @classmethod
+    def parse_ollama_models(cls, v):
+        """Parse comma-separated string into list of models."""
+        if isinstance(v, str):
+            return [model.strip() for model in v.split(",") if model.strip()]
+        return v
+
+
 
 def get_settings() -> Settings:
     """Get application settings."""
