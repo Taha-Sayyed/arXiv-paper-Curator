@@ -47,3 +47,49 @@ class DoclingParser:
         if not self._warmed_up:
             # This happens only once per DoclingParser instance
             self._warmed_up = True
+    
+    #Comprehensive PDF validation including size and page limits
+    def _validate_pdf(self, pdf_path: Path) -> bool:
+        try:
+            # Check file exists and is not empty
+            if pdf_path.stat().st_size == 0:
+                logger.error(f"PDF file is empty: {pdf_path}")
+                raise PDFValidationError(f"PDF file is empty: {pdf_path}")
+
+            # Check file size limit
+            file_size = pdf_path.stat().st_size
+            if file_size > self.max_file_size_bytes:
+                logger.warning(
+                    f"PDF file size ({file_size / 1024 / 1024:.1f}MB) exceeds limit ({self.max_file_size_bytes / 1024 / 1024:.1f}MB), skipping processing"
+                )
+                raise PDFValidationError(
+                    f"PDF file too large: {file_size / 1024 / 1024:.1f}MB > {self.max_file_size_bytes / 1024 / 1024:.1f}MB"
+                )
+
+            # Check if file starts with PDF header
+            with open(pdf_path, "rb") as f:
+                header = f.read(8)
+                if not header.startswith(b"%PDF-"):
+                    logger.error(f"File does not have PDF header: {pdf_path}")
+                    raise PDFValidationError(f"File does not have PDF header: {pdf_path}")
+
+            # Check page count limit
+            pdf_doc = pdfium.PdfDocument(str(pdf_path))
+            actual_pages = len(pdf_doc)
+            pdf_doc.close()
+
+            if actual_pages > self.max_pages:
+                logger.warning(
+                    f"PDF has {actual_pages} pages, exceeding limit of {self.max_pages} pages. Skipping processing to avoid performance issues."
+                )
+                raise PDFValidationError(f"PDF has too many pages: {actual_pages} > {self.max_pages}")
+
+            return True
+
+        except PDFValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Error validating PDF {pdf_path}: {e}")
+            raise PDFValidationError(f"Error validating PDF {pdf_path}: {e}")
+
+    
